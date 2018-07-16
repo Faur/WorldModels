@@ -35,12 +35,16 @@ def main(args):
             first_item = False
           else:
             data = np.concatenate([data, new_data])
-          print('Found {}...current data size = {} episodes'.format(env_name, len(data)))
+          # print('Found {}...current data size = {} episodes'.format(env_name, len(data)))
         except:
           pass
 
+      # TODO: What does data look like at this point?
+      # np.array with shape (200, 300, 64, 64, 3)
+
       if first_item == False: # i.e. data has been found for this batch number
         data = np.array([item for obs in data for item in obs])
+        print('Training {}... current data size = {} episodes'.format(env_name, len(data)))
         vae.train(data)
         vae.model.save_weights('./vae/weights.h5')
       else:

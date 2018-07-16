@@ -6,6 +6,7 @@ from keras.optimizers import Adam
 from keras import backend as K
 from keras.callbacks import EarlyStopping
 from keras.callbacks import TensorBoard
+from time import time
 
 import matplotlib.pyplot as plt
 
@@ -163,7 +164,7 @@ class VAE():
             plt.title(str(i))
             plt.savefig('./videos/car_racing/vae/test-'+str(i)+'.png', bbox_inches='tight')
 
-    def test(self, data, num=256):
+    def test(self, data, num=300):
 
         print(self.model.evaluate(data[:num], data[:num]))
         pred = self.model.predict(data[:num])
