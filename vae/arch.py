@@ -4,17 +4,22 @@ from keras.layers import Input, Conv2D, Flatten, Dense, Conv2DTranspose, Lambda,
 from keras.models import Model
 from keras import backend as K
 from keras.callbacks import EarlyStopping
+from keras.callbacks import TensorBoard
+
+import matplotlib.pyplot as plt
 
 INPUT_DIM = (64,64,3)
 
-CONV_FILTERS = [32,64,64,128]
+# CONV_FILTERS = [32,64,64,128]
+CONV_FILTERS = [32,64,128,256]
 CONV_KERNEL_SIZES = [4,4,4,4]
 CONV_STRIDES = [2,2,2,2]
 CONV_ACTIVATIONS = ['relu','relu','relu','relu']
 
 DENSE_SIZE = 1024
 
-CONV_T_FILTERS = [64,64,32,3]
+# CONV_T_FILTERS = [64,64,32,3]
+CONV_T_FILTERS = [128,64,32,3]
 CONV_T_KERNEL_SIZES = [5,5,6,6]
 CONV_T_STRIDES = [2,2,2,2]
 CONV_T_ACTIVATIONS = ['relu','relu','relu','sigmoid']
@@ -110,10 +115,12 @@ class VAE():
     def set_weights(self, filepath):
         self.model.load_weights(filepath)
 
-    def train(self, data, validation_split = 0.2):
+    def train(self, data, validation_split=0.2):
 
         earlystop = EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=5, verbose=1, mode='auto')
-        callbacks_list = [earlystop]
+        tensorboard = TensorBoard(log_dir="logs/{}".format(time()), write_images=True)
+        callbacks_list = [earlystop, tensorboard]
+
 
         self.model.fit(data, data,
                 shuffle=True,
@@ -123,6 +130,27 @@ class VAE():
                 callbacks=callbacks_list)
         
         self.model.save_weights('./vae/weights.h5')
+
+    def show(self, data, pred, max):
+        plt.figure()
+        for i in range(max):
+            print('Plotting vae pred:', i, '/',max)
+            plt.subplot(121)
+            plt.imshow(data[i])
+            plt.title(str(i))
+
+            plt.subplot(122)
+            plt.imshow(pred[i])
+            plt.title(str(i))
+            plt.savefig('./videos/car_racing/vae/test-'+str(i)+'.png', bbox_inches='tight')
+
+    def test(self, data, num=256):
+
+        print(self.model.evaluate(data[:num], data[:num]))
+        pred = self.model.predict(data[:num])
+
+        self.show(data, pred, num)
+        print('')
 
     def save_weights(self, filepath):
         self.model.save_weights(filepath)

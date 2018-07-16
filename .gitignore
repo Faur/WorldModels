@@ -7,3 +7,8 @@ data/
 history.txt
 vae/weights.h5
 rnn/weights.h5
+.idea/*
+venv/*
+videos/*
+
+*.pyc
