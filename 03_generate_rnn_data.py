@@ -49,6 +49,7 @@ def encode_batch(vae, obs_data, action_data, rew_data, done_data):
 
 def main(args):
 
+    path = args.path
     start_batch = args.start_batch
     max_batch = args.max_batch
 
@@ -66,10 +67,10 @@ def main(args):
 
       for env_name in config.train_envs:
         try:
-          new_obs_data = np.load('./data/obs_data_' + env_name + '_'  + str(batch_num) + '.npy') 
-          new_action_data= np.load('./data/action_data_' + env_name + '_'  + str(batch_num) + '.npy')
-          new_reward_data = np.load('./data/reward_data_' + env_name + '_'  + str(batch_num) + '.npy') 
-          new_done_data = np.load('./data/done_data_' + env_name + '_'  + str(batch_num) + '.npy')
+          new_obs_data = np.load(path + '/obs_data_' + env_name + '_'  + str(batch_num) + '.npy')
+          new_action_data= np.load(path + '/action_data_' + env_name + '_'  + str(batch_num) + '.npy')
+          new_reward_data = np.load(path + '/reward_data_' + env_name + '_'  + str(batch_num) + '.npy')
+          new_done_data = np.load(path + '/done_data_' + env_name + '_'  + str(batch_num) + '.npy')
 
           if first_item:
             obs_data = new_obs_data
@@ -80,7 +81,7 @@ def main(args):
           else:
             obs_data = np.concatenate([obs_data, new_obs_data])
             action_data = np.concatenate([action_data, new_action_data])
-            rew_data = np.concatenate([reward_data, new_reward_data])
+            rew_data = np.concatenate([rew_data, new_reward_data])
             done_data = np.concatenate([done_data, new_done_data])
 
           print('Found {}...current data size = {} episodes'.format(env_name, len(obs_data)))
@@ -90,19 +91,20 @@ def main(args):
       if first_item == False:
         mu, log_var, action, reward, done, initial_mu, initial_log_var = encode_batch(vae, obs_data, action_data, rew_data, done_data)
         
-        np.save('./data/mu_' + str(batch_num), mu)
-        np.save('./data/log_var_' + str(batch_num), log_var)
-        np.save('./data/action_' + str(batch_num), action)
-        np.save('./data/reward_' + str(batch_num), reward)
-        np.save('./data/done_' + str(batch_num), done)
+        np.save(path + '/mu_' + str(batch_num), mu)
+        np.save(path + '/log_var_' + str(batch_num), log_var)
+        np.save(path + '/action_' + str(batch_num), action)
+        np.save(path + '/reward_' + str(batch_num), reward)
+        np.save(path + '/done_' + str(batch_num), done)
 
-        np.save('./data/initial_mu_' + str(batch_num), initial_mu)
-        np.save('./data/initial_log_var_' + str(batch_num), initial_log_var)
+        np.save(path + '/initial_mu_' + str(batch_num), initial_mu)
+        np.save(path + '/initial_log_var_' + str(batch_num), initial_log_var)
       else:
         print('no data found for batch number {}'.format(batch_num))
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description=('Generate RNN data'))
+  parser.add_argument('--path', type=str, default='./data', help='folder to save in')
   parser.add_argument('--start_batch', type=int, default = 0, help='The start batch number')
   parser.add_argument('--max_batch', type=int, default = 0, help='The max batch number')
 

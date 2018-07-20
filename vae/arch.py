@@ -151,8 +151,9 @@ class VAE():
         
         self.model.save_weights('./vae/weights.h5')
 
-    def show(self, data, pred, max):
+    def show(self, data, pred):
         plt.figure()
+        max = len(pred)
         for i in range(max):
             print('Plotting vae pred:', i, '/',max)
             plt.subplot(121)
@@ -164,13 +165,22 @@ class VAE():
             plt.title(str(i))
             plt.savefig('./videos/car_racing/vae/test-'+str(i)+'.png', bbox_inches='tight')
 
-    def test(self, data, num=300):
+    def test(self, data, min=300, max=600):
+        print(self.model.evaluate(data[min:max], data[min:max]))
+        print('data[min:max]', data[min:max].shape)
 
-        print(self.model.evaluate(data[:num], data[:num]))
-        pred = self.model.predict(data[:num])
-
-        self.show(data, pred, num)
+        pred = self.model.predict(data[min:max])
+        self.show(data, pred)
         print('')
+
+    def predict(self, obs):
+        return self.model.predict(obs)
+
+    def encode(self, obs):
+        return self.encoder.predict(obs)
+
+    def decode(self, z_enc):
+        return self.decoder.predict(z_enc)
 
     def save_weights(self, filepath):
         self.model.save_weights(filepath)

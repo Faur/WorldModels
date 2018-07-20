@@ -34,6 +34,8 @@ def main(args):
     new_model = args.new_model
 
     rnn = RNN() #learning_rate = LEARNING_RATE
+    import keras
+    keras.utils.vis_utils.plot_model(rnn.model, to_file='vis_rnn_model.png', show_shapes=True)
 
     if not new_model:
         try:
@@ -91,5 +93,6 @@ if __name__ == "__main__":
     parser.add_argument('--new_model', action='store_true', help='start a new model from scratch?')
 
     args = parser.parse_args()
+    print(args)
 
     main(args)

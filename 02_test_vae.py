@@ -33,8 +33,8 @@ def main(args):
     data = np.array([item for obs in data for item in obs])
     # vae.train(data)
 
-    import keras
-    keras.utils.vis_utils.plot_model(vae.model, to_file='vis_model.png', show_shapes=True)
+    # import keras
+    # keras.utils.vis_utils.plot_model(vae.model, to_file='vis_vae_model.png', show_shapes=True)
     vae.test(data)
   else:
     print('no data found for batch number {}'.format(batch_num))
