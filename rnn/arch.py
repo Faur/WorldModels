@@ -53,10 +53,11 @@ class RNN():
         self.lstm = LSTM(HIDDEN_UNITS, return_sequences=True, return_state=True)
 
         lstm_output, _ , _ = self.lstm(rnn_x)
-        mdn_layer = Dense(GAUSSIAN_MIXTURES*3*Z_DIM + 1)
-        mdn = mdn_layer(lstm_output) #
 
-        rnn = Model(rnn_x, mdn)
+        mdn_layer = Dense(GAUSSIAN_MIXTURES*3*Z_DIM + 1)
+        mdn_train = mdn_layer(lstm_output)
+
+        rnn = Model(rnn_x, mdn_train)
 
         #### THE MODEL USED DURING PREDICTION
         state_input_h = Input(shape=(HIDDEN_UNITS,))
@@ -64,11 +65,17 @@ class RNN():
 
         # lstm_outout_forward , state_h, state_c = self.lstm(rnn_x, initial_state = [state_input_h, state_input_c])
         # mdn_forward = mdn_layer(lstm_outout_forward)
-        _, state_h, state_c = self.lstm(rnn_x, initial_state = [state_input_h, state_input_c])
+        _, state_h, state_c = self.lstm(rnn_x, initial_state=[state_input_h, state_input_c])
 
         # forward = Model([rnn_x]+[state_input_h, state_input_c], [mdn_forward, state_h, state_c])
         # TODO ^ v
-        forward = Model([rnn_x]+[state_input_h, state_input_c], [state_h, state_c])
+        # forward = Model([rnn_x]+[state_input_h, state_input_c], [state_h, state_c])
+
+        z_pred = mdn_layer(state_h) # todo: bad name!
+        # z_pred = K.reshape(z_pred, [-1, GAUSSIAN_MIXTURES * 3])
+        # mixture_coef = self.get_mixture_coef(z_pred)
+
+        forward = Model([rnn_x]+[state_input_h, state_input_c], [z_pred, state_h, state_c])
 
         #### LOSS FUNCTION
 
@@ -139,15 +146,6 @@ class RNN():
             epochs=1,
             batch_size=BATCH_SIZE)
 
-    def predict(self, rnn_input, rnn_state):
-        h, c = rnn_state
-        mdn, state_h, state_c = self.forward.predict([rnn_input] + [h, c])
-
-        z_pred
-        reward
-
-        return z_pred, reward, state_h, state_c
-
 
     def save_weights(self, filepath):
         self.model.save_weights(filepath)
@@ -173,6 +171,5 @@ class RNN():
 
         logSqrtTwoPI = np.log(np.sqrt(2.0 * np.pi))
         return -0.5 * ((z_true - mu) / K.exp(log_sigma)) ** 2 - log_sigma - logSqrtTwoPI
-
 
 
