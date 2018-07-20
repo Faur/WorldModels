@@ -1,4 +1,5 @@
 #python 03_generate_rnn_data.py
+#python 03_generate_rnn_data.py --path ./data/new
 
 from vae.arch import VAE
 import argparse

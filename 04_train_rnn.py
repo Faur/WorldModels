@@ -1,4 +1,5 @@
 #python 04_train_rnn.py --new_model
+#python 04_train_rnn.py --path ./data/new --max_batch 9
 
 from rnn.arch import RNN
 import argparse
@@ -32,6 +33,7 @@ def main(args):
     start_batch = args.start_batch
     max_batch = args.max_batch
     new_model = args.new_model
+    path = args.path
 
     rnn = RNN() #learning_rate = LEARNING_RATE
     import keras
@@ -46,11 +48,11 @@ def main(args):
 
     for batch_num in range(start_batch, max_batch + 1):
         print('Building batch {}...'.format(batch_num))
-        new_mu = np.load('./data/mu_' + str(batch_num) + '.npy')
-        new_log_var = np.load( './data/log_var_' + str(batch_num) + '.npy')
-        new_action= np.load('./data/action_' + str(batch_num) + '.npy')
-        new_reward = np.load('./data/reward_' + str(batch_num) + '.npy')
-        new_done = np.load('./data/done_' + str(batch_num) + '.npy')
+        new_mu = np.load(path + '/mu_' + str(batch_num) + '.npy')
+        new_log_var = np.load( path + '/log_var_' + str(batch_num) + '.npy')
+        new_action= np.load(path + '/action_' + str(batch_num) + '.npy')
+        new_reward = np.load(path + '/reward_' + str(batch_num) + '.npy')
+        new_done = np.load(path + '/done_' + str(batch_num) + '.npy')
 
         if batch_num > start_batch:
             mu_data = np.concatenate([mu_data, new_mu])
@@ -75,8 +77,8 @@ def main(args):
         rnn_output = np.concatenate([z[:, 1:, :], rew[:, 1:, :]], axis = 2) #, done[:, 1:, :]
 
         if epoch == 0:
-            np.save('./data/rnn_input.npy', rnn_input)
-            np.save('./data/rnn_output.npy', rnn_output)
+            np.save(path + '/rnn_input.npy', rnn_input)
+            np.save(path + '/rnn_output.npy', rnn_output)
 
         rnn.train(rnn_input, rnn_output)
 
@@ -91,6 +93,7 @@ if __name__ == "__main__":
     parser.add_argument('--start_batch', type=int, default = 0, help='The start batch number')
     parser.add_argument('--max_batch', type=int, default = 0, help='The max batch number')
     parser.add_argument('--new_model', action='store_true', help='start a new model from scratch?')
+    parser.add_argument('--path', type=str, default='./data', help='folder to save in')
 
     args = parser.parse_args()
     print(args)
