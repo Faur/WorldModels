@@ -29,3 +29,19 @@ def generate_data_action(t, current_action):
 def adjust_obs(obs):
     return obs.astype('float32') / 255.
 
+
+def select_action(env, obs, t, controller):
+    if controller == 'random':
+        action = env.action_space.sample()
+        action[2] = action[2] / 10  # don't break to much.
+        if t < np.random.randint(100):  # Be biased towards accelerating in the beginning.
+            action[1] = 1
+        return action
+    elif controller == 'human':
+        # TODO
+        raise NotImplementedError
+    elif controller == 'agent':
+        # TODO
+        raise NotImplementedError
+    else:
+        raise Exception('Controller "' + str(controller) + '" not understood.')

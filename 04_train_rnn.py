@@ -4,6 +4,9 @@
 from rnn.arch import RNN
 import argparse
 import numpy as np
+import matplotlib.pyplot as plt
+
+plt.ion()
 
 
 # LEARNING_RATE = 0.001
@@ -49,8 +52,8 @@ def main(args):
     for batch_num in range(start_batch, max_batch + 1):
         print('Building batch {}...'.format(batch_num))
         new_mu = np.load(path + '/mu_' + str(batch_num) + '.npy')
-        new_log_var = np.load( path + '/log_var_' + str(batch_num) + '.npy')
-        new_action= np.load(path + '/action_' + str(batch_num) + '.npy')
+        new_log_var = np.load(path + '/log_var_' + str(batch_num) + '.npy')
+        new_action = np.load(path + '/action_' + str(batch_num) + '.npy')
         new_reward = np.load(path + '/reward_' + str(batch_num) + '.npy')
         new_done = np.load(path + '/done_' + str(batch_num) + '.npy')
 
@@ -68,13 +71,33 @@ def main(args):
             rew_data = new_reward
             done_data = new_done
 
-    for epoch in range(rnn.epochs):
+    for epoch in range(1, 1+rnn.epochs):
         print('EPOCH ' + str(epoch))
 
-        z, action, rew ,done = random_batch(mu_data, log_var_data, action_data, rew_data, done_data, rnn.batch_size)
+        z, action, rew,done = random_batch(mu_data, log_var_data, action_data, rew_data, done_data, rnn.batch_size)
 
         rnn_input = np.concatenate([z[:, :-1, :], action[:, :-1, :]], axis = 2)
         rnn_output = np.concatenate([z[:, 1:, :], rew[:, 1:, :]], axis = 2) #, done[:, 1:, :]
+
+        if 1:
+            from vae.arch import VAE
+            vae = VAE()
+            try:
+                vae.set_weights('./vae/weights.h5')
+            except:
+                raise Exception("Either set --new_model or ensure ./vae/weights.h5 exists")
+            fig, [ax_inp, ax_tgt] = plt.subplots(1, 2)
+            for i in range(len(rnn_input)):
+                fig.suptitle("{:3d}".format(i), fontsize=14, fontweight='bold')
+
+                ax_inp.imshow(vae.decode([[rnn_input[epoch, i, :32]]])[0])
+                ax_inp.set_title('input')
+                ax_tgt.imshow(vae.decode([[rnn_output[epoch, i, :32]]])[0])
+                ax_tgt.set_title('target')
+
+                plt.tight_layout()
+                plt.show()
+                plt.pause(0.00001)
 
         if epoch == 0:
             np.save(path + '/rnn_input.npy', rnn_input)

@@ -54,13 +54,12 @@ def main(args):
                     # plt.show()
 
                     env.render()
-                    action = env.action_space.sample()
-                    action[1] = 1
+                    # action = env.action_space.sample()
+                    # action[1] = 1
                     # action = np.array([0, 1, 0])
-
                     t = 0
                     t_random = np.random.randint(0, 200)
-                    print('t_random', t_random, 'action', action)
+                    print('t_random', t_random)
 
                     obs_sequence = []
                     action_sequence = []
@@ -70,10 +69,11 @@ def main(args):
                     while t < time_steps: #and not done:
                         obs_sequence.append(observation)
 
-                        if t < t_random:
-                            pass
-                        else:
-                            action = config.generate_data_action(t, env, action)
+                        # if t < t_random:
+                        #     pass
+                        # else:
+                        #     action = config.generate_data_action(t, env, action)
+                        action = config.select_action(env, observation, t, 'random')
 
                         action_sequence.append(action)
 

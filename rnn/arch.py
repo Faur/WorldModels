@@ -17,13 +17,14 @@ ACTION_DIM = 3
 HIDDEN_UNITS = 256
 GAUSSIAN_MIXTURES = 5
 
-BATCH_SIZE =100
-EPOCHS = 4000
+BATCH_SIZE = 32
+EPOCHS = 2000  # TODO: paper uses 20 epochs
 
-REWARD_FACTOR = 1
+# REWARD_FACTOR = 1
+REWARD_FACTOR = 0  # TODO: add reward loss back in
 #RESTART_FACTOR = 0
 
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.000251
 # MIN_LEARNING_RATE = 0.001
 # DECAY_RATE = 1.0
 
@@ -105,11 +106,11 @@ class RNN():
             d = GAUSSIAN_MIXTURES * Z_DIM
             reward_pred = y_pred[:,:,(3*d):(3*d+1)]
 
-            rew_loss =  K.binary_crossentropy(rew_true, reward_pred)
+            rew_loss = K.binary_crossentropy(rew_true, reward_pred)
 
             rew_loss = K.mean(rew_loss)
 
-            return REWARD_FACTOR * rew_loss
+            return REWARD_FACTOR*rew_loss
 
         # def rnn_done_loss(y_true, y_pred):
         #     z_true, rew_true = self.get_responses(y_true) #, done_true

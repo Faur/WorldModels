@@ -2,27 +2,78 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
+import gym
+
 import config
 from env import make_env
 from vae.arch import VAE
 from rnn.arch import RNN
 
 
-def select_action(env, obs, t, controller):
-    if controller == 'random':
-        action = env.action_space.sample()
-        action[2] = action[2] / 10  # don't break to much.
-        if t < np.random.randint(100):  # Be biased towards accelerating in the beginning.
-            action[1] = 1
-        return action
-    elif controller == 'human':
-        # TODO
-        raise NotImplementedError
-    elif controller == 'agent':
-        # TODO
-        raise NotImplementedError
-    else:
-        raise Exception('Controller "' + str(controller) + '" not understood.')
+GAUSSIAN_MIXTURES = 5
+Z_DIM = 32
+NP_RANDOM, SEED = gym.utils.seeding.np_random()
+
+
+def get_mixture_coef(z_pred):
+    log_pi, mu, log_sigma = np.split(z_pred, 3, 1)
+    log_pi = log_pi - np.log(np.sum(np.exp(log_pi), axis=1, keepdims=True))
+    return log_pi, mu, log_sigma
+
+
+def sample_z(mu, log_sigma):
+    z = mu + (np.exp(log_sigma)) * NP_RANDOM.randn(*log_sigma.shape) * 0
+    return z
+
+
+def get_pi_idx(x, pdf):
+    # samples from a categorial distribution
+    N = pdf.size
+    accumulate = 0
+    for i in range(0, N):
+        accumulate += pdf[i]
+        if (accumulate >= x):
+            return i
+    random_value = np.random.randint(N)
+    # print('error with sampling ensemble, returning random', random_value)
+    return random_value
+
+
+def sample_next_mdn_output(rnn, obs):
+    ## TODO: What is obs dim? is it step wise?
+
+    d = GAUSSIAN_MIXTURES * Z_DIM
+    # y_pred = rnn.model.predict(np.array([[obs]]))[0][0]
+    y_pred, h, c = rnn.forward.predict([np.array([[obs]])] + rnn.lstm.states)
+    rnn.lstm.states = [h, c]
+
+    z_pred = y_pred[:, :3 * d]
+    rew_pred = y_pred[:, -1]
+    z_pred = np.reshape(z_pred, [-1, GAUSSIAN_MIXTURES * 3])
+
+    log_pi, mu, log_sigma = get_mixture_coef(z_pred)
+
+    chosen_log_pi = np.zeros(Z_DIM)
+    chosen_mu = np.zeros(Z_DIM)
+    chosen_log_sigma = np.zeros(Z_DIM)
+
+    # adjust temperatures
+    logmix2 = np.copy(log_pi)
+    logmix2 -= logmix2.max()
+    logmix2 = np.exp(logmix2)
+    logmix2 /= logmix2.sum(axis=1).reshape(Z_DIM, 1)
+
+    for j in range(Z_DIM):
+        idx = get_pi_idx(NP_RANDOM.rand(), logmix2[j])
+        idx = 0
+        chosen_log_pi[j] = idx
+        chosen_mu[j] = mu[j, idx]
+        chosen_log_sigma[j] = log_sigma[j, idx]
+
+    next_z = sample_z(chosen_mu, chosen_log_sigma)
+
+    return next_z, chosen_mu, chosen_log_sigma, chosen_log_pi
+
 
 def main(args):
     controller = args.controller
@@ -65,8 +116,9 @@ def main(args):
         if show_simulation:
             z_enc = vae.encode(np.expand_dims(observation, 0))[0]
 
-            rnn_hidden = np.zeros([1, rnn.hidden_units])
-            rnn_cell = np.zeros([1, rnn.hidden_units])
+            # rnn_hidden = np.zeros([1, rnn.hidden_units])
+            # rnn_cell = np.zeros([1, rnn.hidden_units])
+            rnn.lstm.states = [np.zeros([1, 256]), np.zeros([1, 256])]
 
             # print(z_enc.shape)
             # print()
@@ -75,42 +127,46 @@ def main(args):
         t = 0
         while not done:
             t += 1
-            action = select_action(env, observation, t, controller)
+            action = config.select_action(env, observation, t, controller)
 
             if show_simulation:
+                rnn_input = np.concatenate([z_enc, np.array(action)])
+
+
+                next_z, chosen_mu, chosen_log_sigma, chosen_log_pi = sample_next_mdn_output(rnn, rnn_input)
+                observation_pred = vae.decode(np.array([next_z]))[0]
+
                 # rnn_input = np.concatenate([z_enc, np.expand_dims(action, 0)], axis=1)
                 # rnn_input = np.expand_dims(rnn_input, 0)
-                rnn_input = [
-                    np.array([[np.concatenate([z_enc, action])]]),
-                    rnn_hidden,
-                    rnn_cell
-                ]
-
-                rnn_pred, rnn_hidden, rnn_cell = rnn.forward.predict(rnn_input)
-
-                reward_pred = rnn_pred[0,-1]
+                # rnn_input = [
+                #     np.array([[np.concatenate([z_enc, action])]]),
+                #     rnn_hidden,
+                #     rnn_cell
+                # ]
+                # rnn_pred, rnn_hidden, rnn_cell = rnn.forward.predict(rnn_input)
+                # reward_pred = rnn_pred[0,-1]
                 # reward = reward_pred
-
-                mixture_coef = rnn_pred[0,:-1]
-                mixture_coef = mixture_coef.reshape([-1, rnn.gaussian_mixtures*3])
-                log_pi, mu, log_sigma = np.split(mixture_coef, 3, -1)
-                log_pi = log_pi - np.log(np.sum(np.exp(log_pi), axis=1, keepdims=True))
-
-                z_enc = np.sum(mu, -1)
-
-                observation_pred = vae.decode(np.array([z_enc]))[0]
+                # mixture_coef = rnn_pred[0,:-1]
+                # mixture_coef = mixture_coef.reshape([-1, rnn.gaussian_mixtures*3])
+                # log_pi, mu, log_sigma = np.split(mixture_coef, 3, -1)
+                # log_pi = log_pi - np.log(np.sum(np.exp(log_pi), axis=1, keepdims=True))
+                # # z_enc = np.sum(mu, -1)
+                # z_enc = np.random.normal(mu, np.exp(log_sigma))
+                # z_enc = np.sum(z_enc, -1)
+                # observation_pred = vae.decode(np.array([z_enc]))[0]
 
             observation, reward, done, info = env.step(action)
             observation = config.adjust_obs(observation)
             reward_sum += reward
 
             ## rendering
+            fig.suptitle("{:3d}".format(t), fontsize=14, fontweight='bold')
             ax_org.imshow(observation)
             # env.render()
             # todo: add title etc
             if show_vae:
                 z_enc_vae = vae.encode(np.expand_dims(observation, 0))[0]
-                if t < 10:
+                if t < 100:
                     z_enc = z_enc_vae.copy()
                 reconstruction = vae.decode(np.array([z_enc_vae]))[0]
 
@@ -120,6 +176,7 @@ def main(args):
             if show_simulation:
                 ax_sim.imshow(observation_pred)
 
+            plt.tight_layout()
             plt.show()
             plt.pause(0.00001)
             # plt.show(False)
